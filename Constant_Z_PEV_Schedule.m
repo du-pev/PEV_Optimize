@@ -6,7 +6,7 @@ clear all
 close all
 clc
 %% Load PEV Scenario
-load('PEV_scenario_100.mat')
+load('PEV_scenario_1000.mat')
 
 %% Model
 % Integrality Requirement:
@@ -22,7 +22,7 @@ for n = 1:N
     end
 end
 
-z = 12715;
+z = 12510;
 
 % turns depature matrix into b vector
 b_depart = depart(:);
@@ -205,8 +205,6 @@ model.sense = sensor;
 model.vtype = vtype;
 model.modelsense = 'min';
 
-%gurobi_write(model, 'mip1.lp');
-
 params.outputflag = 0;
 
 result = gurobi(model, params);
@@ -304,7 +302,3 @@ if (1)
     fig2 = strcat('Sched_', num2str(N),'.png');
     saveas(gcf,fig2)
 end
-    
-
-    
-    
