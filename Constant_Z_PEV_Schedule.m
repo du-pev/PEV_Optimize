@@ -22,14 +22,12 @@ for n = 1:N
     end
 end
 
-z = 12510;
-
 % turns depature matrix into b vector
 b_depart = depart(:);
 % creates required SOC b vector
 b_req = SOCreq-SOCinit;
 % creates grid load b vector
-b_supply = load - z;
+b_supply = load;
 
 %%
 
@@ -198,19 +196,28 @@ f = zeros(N*kTotal*2,1);
 A_matrix = sparse([A_depart; -A_supply; -A_req; -A_min; A_max]);
 A_matrix(:,1) = []; 
 
-model.A = A_matrix;
-model.obj = f';
-model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
-model.sense = sensor;
-model.vtype = vtype;
-model.modelsense = 'min';
 
-params.outputflag = 0;
+%% Loop
 
-result = gurobi(model, params);
+%for z = 12750:-5:12520
+for z = 12500:30:12530    
+    b_supply = load - z;
+    
+    model.A = A_matrix;
+    model.obj = f';
+    model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
+    model.sense = sensor;
+    model.vtype = vtype;
+    model.modelsense = 'min';
 
-disp(result);
+    params.outputflag = 0;
 
+    result = gurobi(model, params);
+    
+    disp(z)
+    disp(result);
+    
+end
 %% Massage Results
 schedule = result.x;
 
@@ -302,3 +309,9 @@ if (1)
     fig2 = strcat('Sched_', num2str(N),'.png');
     saveas(gcf,fig2)
 end
+
+%%
+
+spy(A_supply)
+pbaspect([1 1 1])
+
