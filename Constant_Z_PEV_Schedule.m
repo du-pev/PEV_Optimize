@@ -200,7 +200,7 @@ A_matrix(:,1) = [];
 %% Loop
 
 %for z = 12750:-5:12520
-for z = 12500:30:12530    
+for z = 12523.70774    
     b_supply = load - z;
     
     model.A = A_matrix;
