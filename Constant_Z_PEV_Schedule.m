@@ -6,7 +6,7 @@ clear all
 close all
 clc
 %% Load PEV Scenario
-load('PEV_scenario_1000.mat')
+load('PEV_scenario_100.mat')
 
 %% Model
 % Integrality Requirement:
@@ -68,6 +68,14 @@ A_depart2 = sparse(i,j2,v,N*kTotal,2*N*kTotal+1);
 A_depart = A_depart1 + A_depart2;
 toc
 
+spy(A_depart)
+pbaspect([1 1 1])
+xlabel('N*K*2')
+ylabel('N*K')
+d = round(nnz(A_depart)/numel(A_depart)*100,2);
+title(strcat('A Submatrix - Departure Time (d=',num2str(d),'%)'))
+saveas(gcf,'A_depart_spy.png')
+
 %% A_req
 tic
 kInd = 2;
@@ -95,6 +103,14 @@ A_req1 = sparse(i,j,v1,N,2*N*kTotal+1);
 A_req2 = sparse(i,j2,v2,N,2*N*kTotal+1);
 A_req = A_req1 + A_req2;
 toc
+
+spy(A_req)
+pbaspect([1 1 1])
+xlabel('N*K*2')
+ylabel('N')
+d = round(nnz(A_req)/numel(A_req)*100,2);
+title(strcat('A Submatrix - Requested Charge (d=',num2str(d),'%)'))
+saveas(gcf,'A_req_spy.png')
 
 %% A_supply
 tic
@@ -131,6 +147,14 @@ A_supply3 = sparse(i2,1,v3,kTotal,2*N*kTotal+1);
 A_supply = A_supply1 + A_supply2 + A_supply3;
 toc
 
+spy(A_supply)
+pbaspect([1 1 1])
+xlabel('N*K*2')
+ylabel('K')
+d = round(nnz(A_supply)/numel(A_supply)*100,2);
+title(strcat('A Submatrix - Peak Load (d=',num2str(d),'%)'))
+saveas(gcf,'A_supply_spy.png')
+
 %% A_min
 tic
 
@@ -165,6 +189,13 @@ A_min = A_min1 + A_min2;
 A_max = A_min;
 toc
 
+spy(A_min)
+pbaspect([1 1 1])
+xlabel('N*K*2')
+ylabel('N*K')
+d = round(nnz(A_min)/numel(A_min)*100,2);
+title(strcat('A Submatrix - Min/Max SOC (d=',num2str(d),'%)'))
+saveas(gcf,'A_minmax_spy.png')
 %% Plots    
 if (0)
     plot(time,load)
@@ -196,11 +227,17 @@ f = zeros(N*kTotal*2,1);
 A_matrix = sparse([A_depart; -A_supply; -A_req; -A_min; A_max]);
 A_matrix(:,1) = []; 
 
+spy(A_matrix)
+pbaspect([1 1 2])
+xlabel('N*K*2')
+ylabel('K')
+d = round(nnz(A_matrix)/numel(A_matrix)*100,2);
+title(strcat('Complete A Matrix (d=',num2str(d),'%)'))
 
 %% Loop
 
 %for z = 12750:-5:12520
-for z = 12523.70774    
+for z = 12714    
     b_supply = load - z;
     
     model.A = A_matrix;
@@ -312,6 +349,6 @@ end
 
 %%
 
-spy(A_supply)
-pbaspect([1 1 1])
+%spy(A_supply)
+%pbaspect([1 1 1])
 
