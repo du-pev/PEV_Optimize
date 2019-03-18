@@ -6,7 +6,7 @@ clear all
 close all
 clc
 %% Load PEV Scenario
-load('PEV_scenario_1500.mat')
+load('PEV_scenario_2000.mat')
 
 %% Model
 % Integrality Requirement:
@@ -263,7 +263,7 @@ else
     flag = 2;
 end
 disp(flag)
-toc
+
 %% Get UB and LB
 g = .5;
 while flag == 1
@@ -340,7 +340,6 @@ end
 
 
 %% Massage Results
-%{
 schedule = result.x;
 
 charge_sched = [];
@@ -438,4 +437,4 @@ end
 
 %spy(A_supply)
 %pbaspect([1 1 1])
-%}
+
