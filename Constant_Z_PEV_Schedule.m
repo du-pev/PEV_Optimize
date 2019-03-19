@@ -6,7 +6,7 @@ clear all
 close all
 clc
 %% Load PEV Scenario
-load('PEV_scenario_1500.mat')
+load('PEV_scenario_1000.mat')
 
 %% Model
 % Integrality Requirement:
@@ -68,6 +68,7 @@ A_depart2 = sparse(i,j2,v,N*kTotal,2*N*kTotal+1);
 A_depart = A_depart1 + A_depart2;
 toc
 
+%{
 spy(A_depart)
 pbaspect([1 1 1])
 xlabel('N*K*2')
@@ -75,6 +76,7 @@ ylabel('N*K')
 d = round(nnz(A_depart)/numel(A_depart)*100,2);
 title(strcat('A Submatrix - Departure Time (d=',num2str(d),'%)'))
 saveas(gcf,'A_depart_spy.png')
+%}
 
 %% A_req
 tic
@@ -104,6 +106,7 @@ A_req2 = sparse(i,j2,v2,N,2*N*kTotal+1);
 A_req = A_req1 + A_req2;
 toc
 
+%{
 spy(A_req)
 pbaspect([1 1 1])
 xlabel('N*K*2')
@@ -111,6 +114,7 @@ ylabel('N')
 d = round(nnz(A_req)/numel(A_req)*100,2);
 title(strcat('A Submatrix - Requested Charge (d=',num2str(d),'%)'))
 saveas(gcf,'A_req_spy.png')
+%}
 
 %% A_supply
 tic
@@ -147,6 +151,8 @@ A_supply3 = sparse(i2,1,v3,kTotal,2*N*kTotal+1);
 A_supply = A_supply1 + A_supply2 + A_supply3;
 toc
 
+
+%{
 spy(A_supply)
 pbaspect([1 1 1])
 xlabel('N*K*2')
@@ -154,6 +160,8 @@ ylabel('K')
 d = round(nnz(A_supply)/numel(A_supply)*100,2);
 title(strcat('A Submatrix - Peak Load (d=',num2str(d),'%)'))
 saveas(gcf,'A_supply_spy.png')
+%}
+
 
 %% A_min
 tic
@@ -189,6 +197,7 @@ A_min = A_min1 + A_min2;
 A_max = A_min;
 toc
 
+%{
 spy(A_min)
 pbaspect([1 1 1])
 xlabel('N*K*2')
@@ -196,6 +205,8 @@ ylabel('N*K')
 d = round(nnz(A_min)/numel(A_min)*100,2);
 title(strcat('A Submatrix - Min/Max SOC (d=',num2str(d),'%)'))
 saveas(gcf,'A_minmax_spy.png')
+%}
+
 %% Plots    
 if (0)
     plot(time,load)
@@ -227,12 +238,14 @@ f = zeros(N*kTotal*2,1);
 A_matrix = sparse([A_depart; -A_supply; -A_req; -A_min; A_max]);
 A_matrix(:,1) = []; 
 
+%{
 spy(A_matrix)
 pbaspect([1 1 2])
 xlabel('N*K*2')
 ylabel('K')
 d = round(nnz(A_matrix)/numel(A_matrix)*100,2);
 title(strcat('Complete A Matrix (d=',num2str(d),'%)'))
+%}
 
 %% Warm Start
 tic
@@ -265,9 +278,9 @@ end
 disp(flag)
 toc
 %% Get UB and LB
-g = .5;
+gap = .5;
 while flag == 1
-    z = z - g;
+    z = z - gap;
     b_supply = load - z;
     model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
     result = gurobi(model, params);
@@ -288,7 +301,7 @@ end
 
 
 while flag == 2
-    z = z + g;
+    z = z + gap;
     b_supply = load - z;
     model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
     result = gurobi(model, params);
@@ -315,6 +328,9 @@ UB
 alpha = .5;
 z = (UB+LB)/2;
 
+z_vals = [];
+runtimes = [];
+
 for iter = 1:10
     b_supply = load - z;
     model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
@@ -323,25 +339,34 @@ for iter = 1:10
     disp(z)
     disp(result);
     
+    z_vals(iter) = z;
+    runtimes(iter) = result.runtime;
+    
     if result.objbound == 0
         UB = z;
-        g = UB-LB;
-        z = UB - alpha*g;
+        z_feas = z;
+        gap = UB-LB;
+        z = UB - alpha*gap;
+        result_feas = result;
         disp(strcat("Iter: ",num2str(iter), " Status: Feasible"));
     % infeasible
     else     
         LB = z;
-        g = UB-LB;
-        z = LB + alpha*g;
+        gap = UB-LB;
+        z = LB + alpha*gap;
         disp(strcat("Iter: ",num2str(iter), " Status: Infeasible"));
     end
-    disp(z)
 end
 
+format long
+disp(strcat("Best feasible objective value: ",num2str(z_feas)))
+
+z_vals'
+runtimes'
 
 %% Massage Results
-%{
-schedule = result.x;
+
+schedule = result_feas.x;
 
 charge_sched = [];
 discharge_sched = [];
@@ -357,13 +382,17 @@ for k = 1:kTotal
     end    
 end
 
-SOC_sched = SOCinit;
+
+SOC_sched = zeros(N,kTotal+1);
+
+SOC_sched(:,1) = SOCinit;
 
 for k = 1:kTotal
     for n = 1:N
         SOC_sched(n,k+1) = SOC_sched(n,k) + eta(n)*g(n)*charge_sched(n,k) - eta(n)*h(n)*discharge_sched(n,k);            
     end
 end
+
 
 %% Plot Stuff
 close all
@@ -395,11 +424,11 @@ if (1)
     xlabel('Time (hours)');
     ylabel('Load (MW)');
     legend('Forecasted Load','Optimal Charge Schedule Load')
-    p1Title = strcat(['Optimal Charge Schedule Load for ', num2str(N), ' Vehicles (Peak Load = ' num2str(result.objval), ')']);
+    p1Title = strcat(['Optimal Charge Schedule Load for ', num2str(N), ' Vehicles (Peak Load = ' num2str(z_feas), ')']);
     title(p1Title)
     hold off
     
-    fig1 = strcat('Load_', num2str(N),'.png');
+    fig1 = strcat('CZ_Load_', num2str(N),'.png');
     set(gcf, 'Position', [50 50 1000 800])
     saveas(gcf,fig1)
 end
@@ -430,7 +459,7 @@ if (1)
     legend('SOC V1','SOC V2','SOC V3','REQ V1','REQ V2','REQ V3')
     
     set(gcf, 'Position', [50 50 1000 800])
-    fig2 = strcat('Sched_', num2str(N),'.png');
+    fig2 = strcat('CZ_Sched_', num2str(N),'.png');
     saveas(gcf,fig2)
 end
 

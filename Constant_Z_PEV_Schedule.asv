@@ -6,7 +6,7 @@ clear all
 close all
 clc
 %% Load PEV Scenario
-load('PEV_scenario_2000.mat')
+load('PEV_scenario_1500.mat')
 
 %% Model
 % Integrality Requirement:
@@ -263,7 +263,7 @@ else
     flag = 2;
 end
 disp(flag)
-
+toc
 %% Get UB and LB
 g = .5;
 while flag == 1
@@ -315,6 +315,9 @@ UB
 alpha = .5;
 z = (UB+LB)/2;
 
+z_vals = [];
+runtimes = [];
+
 for iter = 1:10
     b_supply = load - z;
     model.rhs = [b_depart; -b_supply; -b_req; -b_min; b_max];
@@ -323,10 +326,15 @@ for iter = 1:10
     disp(z)
     disp(result);
     
+    z_vals(iter) = z;
+    runtimes(iter) = result.runtime;
+    
     if result.objbound == 0
         UB = z;
+        z_feas = z;
         g = UB-LB;
         z = UB - alpha*g;
+        result_feas = result;
         disp(strcat("Iter: ",num2str(iter), " Status: Feasible"));
     % infeasible
     else     
@@ -335,12 +343,17 @@ for iter = 1:10
         z = LB + alpha*g;
         disp(strcat("Iter: ",num2str(iter), " Status: Infeasible"));
     end
-    disp(z)
 end
 
+format long
+disp(strcat("Best feasible objective value: ",num2str(z_feas)))
+
+z_vals'
+runtimes'
 
 %% Massage Results
-schedule = result.x;
+
+schedule = result_feas.x;
 
 charge_sched = [];
 discharge_sched = [];
@@ -437,4 +450,4 @@ end
 
 %spy(A_supply)
 %pbaspect([1 1 1])
-
+%}
